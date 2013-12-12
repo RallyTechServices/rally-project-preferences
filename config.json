@@ -1,6 +1,6 @@
 {
     "name": "Project Preference Setter",
     "className": "CustomApp",
-    "server": "https://demo01.rallydev.com",
+    "server": "https://sandbox.rallydev.com",
     "sdk": "2.0rc2"
 }

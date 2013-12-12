@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Project Preference Setter</title>
+    <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
+    <!--  Build Date: Thu Dec 12 2013 16:09:07 GMT-0500 (Eastern Standard Time) -->
+    
+    <script type="text/javascript">
+        var APP_BUILD_DATE = "Thu Dec 12 2013 16:09:07 GMT-0500 (Eastern Standard Time)";
+        var CHECKSUM = 2642464648;
+    </script>
+    
+    <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
+
+    <script type="text/javascript">
+        Rally.onReady(function() {
+             
+/**
+ * A link that pops up a version dialog box
+ */
+
+Ext.define('Rally.technicalservices.InfoLink',{
+    extend: 'Ext.Component',
+    alias: 'widget.tsinfolink',
+    
+    /**
+     * @cfg {String} informationHtml
+     * Additional text to be displayed on the popup dialog (for exmaple,
+     * to add a description of the app's use or functionality)
+     */
+    informationHtml: null,
+    
+    /**
+     * 
+     * cfg {String} title
+     * The title for the dialog box
+     */
+     text: "Information",
+    
+    renderTpl: "<div id='{id}-infolinkWrap' class='tsinfolink'>TS</div>",
+
+    initComponent: function() {
+        this.callParent(arguments);
+       
+    },
+    
+    onRender: function() {
+        this.callParent(arguments);
+        this.mon(this.el,'click',this.onClick,this);
+    },
+    _generateChecksum: function(string){
+        var chk = 0x12345678,
+            i;
+        string = string.replace(/var CHECKSUM = .*;/,"");
+        
+        for (i = 0; i < string.length; i++) {
+            chk += (string.charCodeAt(i) * i);
+        }
+    
+        return chk;
+    },
+    _checkChecksum: function(container) {
+        var me = this;
+        Ext.Ajax.request({
+            url: document.URL,
+            params: {
+                id: 1
+            },
+            success: function (response) {
+                text = response.responseText;
+                if ( CHECKSUM ) {
+                    if ( CHECKSUM !== me._generateChecksum(text) ) {
+                        console.log("Checksums don't match!");
+                        if ( me.dialog ) {
+                            me.dialog.add({xtype:'container',html:'Checksums do not match'});
+                        }
+                    }
+                }
+            }
+        });
+    },
+    onClick: function(e) {
+        var me = this;
+        this._checkChecksum(this);
+        
+        var dialog_items = [];
+        
+        if ( this.informationHtml ) {
+            dialog_items.push({
+                xtype:'container',
+                html: this.informationHtml
+            });
+        }
+                
+        dialog_items.push({
+            xtype:'container',
+            html:"This app was created by the Rally Technical Services Team."
+        });
+        
+        if ( APP_BUILD_DATE ) {
+            dialog_items.push({
+                xtype:'container',
+                html:'Build date/time: ' + APP_BUILD_DATE
+            });
+        }
+        
+        if (this.dialog){this.dialog.destroy();}
+        this.dialog = Ext.create('Rally.ui.dialog.Dialog',{
+            defaults: { padding: 5, margin: 5 },
+            closable: true,
+            draggable: true,
+            title: me.title,
+            items: dialog_items
+        });
+        this.dialog.show();
+    }
+});
+/*
+ */
+Ext.define('Rally.technicalservices.Logger',{
+    constructor: function(config){
+        Ext.apply(this,config);
+    },
+    log: function(args){
+        var timestamp = "[ " + Ext.util.Format.date(new Date(), "Y-m-d H:i:s.u") + " ]";
+        //var output_args = arguments;
+        //output_args.unshift( [ "[ " + timestamp + " ]" ] );
+        //output_args = Ext.Array.push(output_args,arguments);
+        
+        var output_args = [];
+        output_args = Ext.Array.push(output_args,[timestamp]);
+        output_args = Ext.Array.push(output_args, Ext.Array.slice(arguments,0));
+
+        window.console && console.log.apply(console,output_args);
+    }
+
+});
+
+Ext.define('CustomApp', {
+    extend: 'Rally.app.App',
+    componentCls: 'app',
+
+    logger: new Rally.technicalservices.Logger(),
+    items: [
+        {xtype:'container',itemId:'settings_box', defaults: {padding: 10, margin: 10 }},
+        {xtype:'container',itemId:'buttons_box', defaults: {padding:10,margin:10}},
+        {xtype:'tsinfolink'}
+    ],
+    launch: function() {
+        this.project = this.getContext().getProject();
+        this.logger.log("Project:", this.project.Name);
+        //TODO: make sure this user has permission
+        //TODO: check settings
+        this._settingFields = [
+            { dataIndex:'Cost', type: 'rallynumberfield' },
+            { dataIndex:'PIL', type: 'pil_combo' },
+            { dataIndex:'Stage', type: 'stage_combo' },
+            { dataIndex:'foo', type: 'rallytextfield' }
+        ];
+        this._getCurrentSettings();
+        
+//        this.settings = {
+//            foo: "John was here",
+//            bar: "So were Eloi and Adrie"
+//        };
+//        
+//        this._saveSettings();
+    },
+    _getCurrentSettings: function() {
+        Rally.data.PreferenceManager.load({
+            project: this.getContext().getProject(),
+            filterByName: 'philips.project.settings',
+            scope: this,
+            success: function(prefs) {
+                if ( prefs && prefs['philips.project.settings'] ) {
+                    this.settings = Ext.JSON.decode(prefs['philips.project.settings']);
+                }
+                this.logger.log("pref retrieved: ", this.settings );
+                this._displaySettings();
+                this._addButtons();
+            }
+        });
+    },
+    _addButtons: function() {
+        this.down('#buttons_box').add({
+            itemId:'save_button',
+            xtype:'rallybutton',
+            text:'Save Settings',
+            listeners: {
+                scope: this,
+                click: function(button) {
+                    button.setDisabled(true);
+                    this._saveSettings();
+                }
+            }
+        });
+    },
+    _displaySettings: function() {
+        var me = this;
+        // Put up greeting notice
+        this.down('#settings_box').add({
+            xtype:'container',
+            html: 'To set "special" properties for the project called ' +
+                this.getContext().getProject().Name + 
+                ', change the values below'
+        });
+        // cycle through the fields and display them for changing
+        Ext.Array.each(this._settingFields, function(field) {
+            var type = field.type;
+            var label = field.dataIndex;
+            var value = me.settings[label];
+            if ( type == 'rallynumberfield' ) {
+                me.down('#settings_box').add({
+                    xtype: type,
+                    value: value,
+                    fieldLabel: label,
+                    listeners: {
+                        change: function( numberfield, new_value ) {
+                            me.settings[label] = new_value;
+                        }
+                    }
+                });
+            }
+        });
+    },
+    _saveSettings: function() {
+        var me = this;
+        // save whatever all the current settings are
+        Rally.data.PreferenceManager.update({
+            project: this.getContext().getProject(),
+            settings: {
+                'philips.project.settings': Ext.JSON.encode(this.settings)
+            },
+            success: function(updatedRecords, notUpdatedRecords) {
+                me.down('#save_button').setDisabled(false);
+            },
+            failure: function() {
+                alert('there was a problem');
+            }
+        });
+    }
+});
+
+            
+               Rally.launchApp('CustomApp', {
+                   name: 'Project Preference Setter'
+               });
+        });
+    </script>
+    
+    <style type="text/css">
+
+.app {
+}
+.tsinfolink {
+    position:absolute;
+    right:0px;
+    width:5%;
+}
+    </style>
+
+</head>
+<body></body>
+</html>

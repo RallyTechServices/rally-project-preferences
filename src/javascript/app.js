@@ -6,6 +6,7 @@ Ext.define('CustomApp', {
     items: [
         {xtype:'container',itemId:'settings_box', defaults: {padding: 10, margin: 10 }},
         {xtype:'container',itemId:'buttons_box', defaults: {padding:10,margin:10}},
+
         {xtype:'tsinfolink'}
     ],
     launch: function() {
@@ -16,9 +17,20 @@ Ext.define('CustomApp', {
         this._settingFields = [
             { dataIndex:'Cost', type: 'rallynumberfield' },
             { dataIndex:'PIL', type: 'pil_combo' },
-            { dataIndex:'Stage', type: 'stage_combo' },
-            { dataIndex:'foo', type: 'rallytextfield' }
+            { dataIndex:'Stage', type: 'stage_combo' }
+            
         ];
+
+         this.Pil_Store = Ext.create('Ext.data.Store', {
+            fields: ['pil'],
+            data : [
+                 {"pil":"I2M" },
+                 {"pil":"M2O" },
+                 {"pil":"O2C" }
+            ]
+        });
+
+       
         this._getCurrentSettings();
         
 //        this.settings = {
@@ -83,6 +95,24 @@ Ext.define('CustomApp', {
                     }
                 });
             }
+             if ( type == 'pil_combo' ) {
+                me.down('#settings_box').add({
+                   xtype: 'combobox',
+                    fieldLabel: label,
+                    value: value,
+                    store: me.Pil_Store,
+                    queryMode: 'local',
+                    displayField: 'pil',
+                    valueField: 'pil',
+                    listeners:{
+                        scope: this,
+                        'select': function(cb){
+                         me.settings[label] = cb.getValue();
+                        }
+                    }
+                });
+
+             }
         });
     },
     _saveSettings: function() {
