@@ -3,11 +3,11 @@
 <head>
     <title>Project Preference Setter</title>
     <!--  (c) 2013 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Thu Dec 12 2013 16:09:07 GMT-0500 (Eastern Standard Time) -->
+    <!--  Build Date: Thu Dec 12 2013 23:00:12 GMT+0100 (W. Europe Standard Time) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Dec 12 2013 16:09:07 GMT-0500 (Eastern Standard Time)";
-        var CHECKSUM = 2642464648;
+        var APP_BUILD_DATE = "Thu Dec 12 2013 23:00:12 GMT+0100 (W. Europe Standard Time)";
+        var CHECKSUM = 3179369428;
     </script>
     
     <script type="text/javascript" src="/apps/2.0rc2/sdk.js"></script>
@@ -144,6 +144,7 @@ Ext.define('CustomApp', {
     items: [
         {xtype:'container',itemId:'settings_box', defaults: {padding: 10, margin: 10 }},
         {xtype:'container',itemId:'buttons_box', defaults: {padding:10,margin:10}},
+
         {xtype:'tsinfolink'}
     ],
     launch: function() {
@@ -153,10 +154,13 @@ Ext.define('CustomApp', {
         //TODO: check settings
         this._settingFields = [
             { dataIndex:'Cost', type: 'rallynumberfield' },
-            { dataIndex:'PIL', type: 'pil_combo' },
-            { dataIndex:'Stage', type: 'stage_combo' },
-            { dataIndex:'foo', type: 'rallytextfield' }
+            { dataIndex:'PIL', type: 'pil_combo', values: ['I2M', 'M2O', 'O2C'] },
+            { dataIndex:'Stage', type: 'stage_combo', values: ['Foreseen', 'Planned', 'Active'] }
+            
         ];
+
+
+       
         this._getCurrentSettings();
         
 //        this.settings = {
@@ -181,6 +185,21 @@ Ext.define('CustomApp', {
             }
         });
     },
+	
+	_getStore4field: function(field) {
+	var data_array = [];
+	
+		Ext.Array.each(
+			field.values, function(value){
+				data_array.push({value: value})
+			});
+			
+	         return Ext.create('Ext.data.Store', {
+            fields: ['value'],
+            data : data_array
+        });
+
+	};
     _addButtons: function() {
         this.down('#buttons_box').add({
             itemId:'save_button',
@@ -221,6 +240,24 @@ Ext.define('CustomApp', {
                     }
                 });
             }
+             if ( type == 'pil_combo' ) {
+                me.down('#settings_box').add({
+                   xtype: 'combobox',
+                    fieldLabel: label,
+                    value: value,
+                    store: me._getStore4field(field),
+                    queryMode: 'local',
+                    displayField: 'value',
+                    valueField: 'value',
+                    listeners:{
+                        scope: this,
+                        'select': function(cb){
+                         me.settings[label] = cb.getValue();
+                        }
+                    }
+                });
+
+             }
         });
     },
     _saveSettings: function() {

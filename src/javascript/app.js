@@ -16,19 +16,14 @@ Ext.define('CustomApp', {
         //TODO: check settings
         this._settingFields = [
             { dataIndex:'Cost', type: 'rallynumberfield' },
-            { dataIndex:'PIL', type: 'pil_combo' },
-            { dataIndex:'Stage', type: 'stage_combo' }
+            { dataIndex:'PIL', type: 'combo_box', values: ['I2M', 'M2O', 'O2C'] },
+            { dataIndex:'Stage', type: 'combo_box', values: ['Foreseen', 'Planned', 'Active'] }
             
-        ];
-
-         this.Pil_Store = Ext.create('Ext.data.Store', {
-            fields: ['pil'],
-            data : [
-                 {"pil":"I2M" },
-                 {"pil":"M2O" },
-                 {"pil":"O2C" }
-            ]
-        });
+        ],
+		current_user = 'pietje',
+		
+		this._InspectUser();
+		this.logger.log("after user: ");
 
        
         this._getCurrentSettings();
@@ -40,6 +35,45 @@ Ext.define('CustomApp', {
 //        
 //        this._saveSettings();
     },
+	
+	_InspectUser: function(){
+	var me = this;
+	    current_user = this.getContext().getUser();
+		current_user_email = current_user.UserName;
+			me.logger.log("this is me: ", current_user);
+			me.logger.log("this is me: ", current_user_email);
+			current_project = this.getContext().getProject().ObjectID;
+			this._getProjectDetails(current_project);
+			me.logger.log("this is project: ", current_project);
+			me.logger.log("this is owner: ", "test");
+			me.logger.log("this is owner: ", this.project_store);
+		
+	},
+
+	_getProjectDetails: function(current_project) {
+	this.logger.log("project name: ", current_project);
+		this.project_store = Ext.create('Rally.data.wsapi.Store',{
+			model: 'Project',
+			filters: [{
+						property: "ObjectID",
+						operator: "=",
+						value: current_project
+					}],
+			scope: this,
+			autoLoad: true,
+			listeners: {
+				scope: this,
+				load: function(store, data, success) {
+					this.logger.log("been here",data[0].get('Owner').UserName);
+					this.logger.log("result: ", this.project.Name);
+					/* need to do modification check here (for async) */
+				}
+			},
+			fetch: ['Name', 'Owner','UserName']
+		});
+		this.logger.log("been here too");
+	},
+	
     _getCurrentSettings: function() {
         Rally.data.PreferenceManager.load({
             project: this.getContext().getProject(),
@@ -55,6 +89,21 @@ Ext.define('CustomApp', {
             }
         });
     },
+	
+	_getStore4field: function(field) {
+	var data_array = [];
+	
+		Ext.Array.each(
+			field.values, function(value){
+				data_array.push({value: value})
+			});
+			
+	         return Ext.create('Ext.data.Store', {
+            fields: ['value'],
+            data : data_array
+        });
+	},
+	
     _addButtons: function() {
         this.down('#buttons_box').add({
             itemId:'save_button',
@@ -95,15 +144,15 @@ Ext.define('CustomApp', {
                     }
                 });
             }
-             if ( type == 'pil_combo' ) {
+             if ( type == 'combo_box' ) {
                 me.down('#settings_box').add({
                    xtype: 'combobox',
                     fieldLabel: label,
                     value: value,
-                    store: me.Pil_Store,
+                    store: me._getStore4field(field),
                     queryMode: 'local',
-                    displayField: 'pil',
-                    valueField: 'pil',
+                    displayField: 'value',
+                    valueField: 'value',
                     listeners:{
                         scope: this,
                         'select': function(cb){
